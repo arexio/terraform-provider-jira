@@ -108,7 +108,7 @@ func deleteUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagno
 
 	resp, err := api.User.Delete(ctx, rd.Id())
 	if err != nil {
-		switch resp.Code {
+		switch resp.Response.StatusCode {
 		case http.StatusNotFound:
 			rd.SetId("")
 			return nil

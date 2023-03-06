@@ -112,7 +112,7 @@ func deleteUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagno
 		case http.StatusNotFound:
 			rd.SetId("")
 			return nil
-		case http.StatusConflict:
+		case http.StatusBadRequest:
 			rd.SetId("")
 			return diag.Diagnostics{
 				diag.Diagnostic{

@@ -73,9 +73,9 @@ func createGroupMembership(ctx context.Context, rd *schema.ResourceData, m any) 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	groupResp, _, err := api.Group.Add(ctx, membership.GroupName, membership.AccountID)
+	groupResp, resp, err := api.Group.Add(ctx, membership.GroupName, membership.AccountID)
 	if err != nil {
-		return diag.Errorf("creating status code: %s [groupname: %s accountID: %s]", membership.GroupName, membership.AccountID)
+		return diag.Errorf("creating status code: %s [groupname: %s accountID: %s]", resp.Code, membership.GroupName, membership.AccountID)
 	}
 
 	rd.SetId(fmt.Sprintf("%s:%s", groupResp.Name, membership.AccountID))

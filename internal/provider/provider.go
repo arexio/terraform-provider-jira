@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/ctreminiom/go-atlassian/admin"
 	jira "github.com/ctreminiom/go-atlassian/jira/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -31,9 +32,18 @@ func New() *schema.Provider {
 			"token": {
 				Type:        schema.TypeString,
 				Required:    true,
+				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("JIRA_TOKEN", nil),
 				Description: "Your Jira user token. " +
 					"It can also be sourced from the `JIRA_TOKEN` environment variable.",
+			},
+			"admin_token": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("ADMIN_TOKEN", nil),
+				Description: "Your Jira admin token. " +
+					"It can also be sourced from the `ADMIN_TOKEN` environment variable.",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -48,15 +58,30 @@ func New() *schema.Provider {
 	return provider
 }
 
+type Client struct {
+	Jira  *jira.Client
+	Admin *admin.Client
+}
+
 func configureProvider(tfVersion string) schema.ConfigureContextFunc {
 	return func(ctx context.Context, rd *schema.ResourceData) (interface{}, diag.Diagnostics) {
-		client, err := jira.New(nil, rd.Get("domain").(string))
+		var (
+			cli Client
+			err error
+		)
+
+		cli.Jira, err = jira.New(nil, rd.Get("domain").(string))
 		if err != nil {
 			return nil, diag.FromErr(err)
 		}
+		cli.Jira.Auth.SetBasicAuth(rd.Get("email").(string), rd.Get("token").(string))
 
-		client.Auth.SetBasicAuth(rd.Get("email").(string), rd.Get("token").(string))
+		cli.Admin, err = admin.New(nil)
+		if err != nil {
+			return nil, diag.FromErr(err)
+		}
+		cli.Admin.Auth.SetBearerToken(rd.Get("admin_token").(string))
 
-		return client, nil
+		return &cli, nil
 	}
 }

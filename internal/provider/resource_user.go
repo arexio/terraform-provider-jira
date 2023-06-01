@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	jira "github.com/ctreminiom/go-atlassian/jira/v3"
 	"github.com/ctreminiom/go-atlassian/pkg/infra/models"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -15,7 +14,7 @@ func newUser() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: createUser,
 		ReadContext:   readUser,
-		DeleteContext: deleteUser,
+		DeleteContext: disableUser,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -48,13 +47,13 @@ func newUser() *schema.Resource {
 }
 
 func createUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	cli := m.(*Client)
 
 	user, err := expandUser(rd)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	userResp, _, err := api.User.Create(ctx, &models.UserPayloadScheme{
+	userResp, _, err := cli.Jira.User.Create(ctx, &models.UserPayloadScheme{
 		EmailAddress: user.EmailAddress,
 	})
 	if err != nil {
@@ -81,9 +80,9 @@ func expandUser(d *schema.ResourceData) (*models.UserScheme, error) {
 }
 
 func readUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	cli := m.(*Client)
 
-	user, resp, err := api.User.Get(ctx, rd.Id(), nil)
+	user, resp, err := cli.Jira.User.Get(ctx, rd.Id(), nil)
 	if err != nil {
 		if resp.StatusCode == http.StatusNotFound {
 			rd.SetId("")
@@ -103,21 +102,20 @@ func readUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnost
 	return diag.FromErr(result.ErrorOrNil())
 }
 
-func deleteUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+func disableUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
+	cli := m.(*Client)
 
-	resp, err := api.User.Delete(ctx, rd.Id())
+	resp, err := cli.Admin.User.Disable(ctx, rd.Id(), "")
 	if err != nil {
 		switch resp.Response.StatusCode {
 		case http.StatusNotFound:
 			rd.SetId("")
 			return nil
 		case http.StatusBadRequest:
-			rd.SetId("")
 			return diag.Diagnostics{
 				diag.Diagnostic{
-					Severity: diag.Warning,
-					Summary:  err.Error(),
+					Severity: diag.Error,
+					Summary:  resp.Bytes.String(),
 				},
 			}
 		default:

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	jira "github.com/ctreminiom/go-atlassian/jira/v3"
 	"github.com/ctreminiom/go-atlassian/pkg/infra/models"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -36,13 +35,13 @@ func newGroup() *schema.Resource {
 }
 
 func createGroup(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	api := m.(*Client)
 
 	group, err := expandGroup(rd)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	groupResp, _, err := api.Group.Create(ctx, group.Name)
+	groupResp, _, err := api.Jira.Group.Create(ctx, group.Name)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -67,9 +66,9 @@ func expandGroup(d *schema.ResourceData) (*models.GroupScheme, error) {
 }
 
 func readGroup(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	api := m.(*Client)
 
-	groups, resp, err := api.Group.Bulk(ctx, &models.GroupBulkOptionsScheme{
+	groups, resp, err := api.Jira.Group.Bulk(ctx, &models.GroupBulkOptionsScheme{
 		GroupNames: []string{rd.Id()},
 	}, 0, 1)
 	if err != nil {
@@ -96,9 +95,9 @@ func readGroup(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnos
 }
 
 func deleteGroup(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	api := m.(*Client)
 
-	resp, err := api.Group.Delete(ctx, rd.Id())
+	resp, err := api.Jira.Group.Delete(ctx, rd.Id())
 	if err != nil {
 		if resp.StatusCode == http.StatusNotFound {
 			rd.SetId("")

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	jira "github.com/ctreminiom/go-atlassian/jira/v3"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -67,13 +66,13 @@ type membershipScheme struct {
 }
 
 func createGroupMembership(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	api := m.(*Client)
 
 	membership, err := expandGroupMembership(rd)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	groupResp, resp, err := api.Group.Add(ctx, membership.GroupName, membership.AccountID)
+	groupResp, resp, err := api.Jira.Group.Add(ctx, membership.GroupName, membership.AccountID)
 	if err != nil {
 		return diag.Errorf("creating status code: %s [groupname: %s accountID: %s]", resp.Code, membership.GroupName, membership.AccountID)
 	}
@@ -84,11 +83,11 @@ func createGroupMembership(ctx context.Context, rd *schema.ResourceData, m any) 
 }
 
 func readGroupMembership(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	api := m.(*Client)
 
 	membership := newMembershipFromID(rd.Id())
 
-	user, resp, err := api.User.Get(ctx, membership.AccountID, []string{"groups"})
+	user, resp, err := api.Jira.User.Get(ctx, membership.AccountID, []string{"groups"})
 	if err != nil {
 		if resp.StatusCode == http.StatusNotFound {
 			rd.SetId("")
@@ -118,10 +117,10 @@ func readGroupMembership(ctx context.Context, rd *schema.ResourceData, m any) di
 }
 
 func deleteGroupMembership(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
-	api := m.(*jira.Client)
+	api := m.(*Client)
 
 	membership := newMembershipFromID(rd.Id())
-	resp, err := api.Group.Remove(ctx, membership.GroupName, membership.AccountID)
+	resp, err := api.Jira.Group.Remove(ctx, membership.GroupName, membership.AccountID)
 	if err != nil {
 		if resp.StatusCode == http.StatusNotFound {
 			rd.SetId("")

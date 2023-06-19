@@ -105,7 +105,7 @@ func readUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnost
 func disableUser(ctx context.Context, rd *schema.ResourceData, m any) diag.Diagnostics {
 	cli := m.(*Client)
 
-	resp, err := cli.Admin.User.Disable(ctx, rd.Id(), "")
+	resp, err := cli.Admin.User.Disable(ctx, rd.Id(), "terraform-provider-jira: destroy resource")
 	if err != nil {
 		switch resp.Response.StatusCode {
 		case http.StatusNotFound:
